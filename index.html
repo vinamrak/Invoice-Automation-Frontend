@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Download Latest Invoice</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    body { font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif; display:flex; height:100vh; margin:0; align-items:center; justify-content:center; background:#fafafa; }
+    button { font-size:16px; padding:12px 18px; border-radius:10px; border:1px solid #ddd; background:white; cursor:pointer; }
+    button:disabled { opacity:.6; cursor:not-allowed; }
+  </style>
+</head>
+<body>
+  <button id="btn">Download latest invoice</button>
+
+  <script>
+    const BACKEND_URL = "http://127.0.0.1:8000/download-latest-invoice";
+
+    async function downloadInvoice() {
+      const btn = document.getElementById("btn");
+      btn.disabled = true;
+      btn.textContent = "Preparing…";
+
+      try {
+        const res = await fetch(BACKEND_URL, { method: "GET" });
+        if (!res.ok) {
+          const text = await res.text();
+          throw new Error(text || ("Request failed: " + res.status));
+        }
+
+        // Use server-provided filename if present
+        let filename = "Invoice_Signed.pdf";
+        const cd = res.headers.get("Content-Disposition");
+        if (cd && cd.includes("filename=")) {
+          const match = cd.match(/filename="?([^"]+)"?/i);
+          if (match) filename = match[1];
+        }
+
+        const blob = await res.blob();
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        URL.revokeObjectURL(url);
+      } catch (err) {
+        alert("Could not download invoice:\n" + (err?.message || err));
+      } finally {
+        btn.disabled = false;
+        btn.textContent = "Download latest invoice";
+      }
+    }
+
+    document.getElementById("btn").addEventListener("click", downloadInvoice);
+  </script>
+</body>
+</html>
